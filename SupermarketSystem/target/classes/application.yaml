@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: supermarket-system
+  datasource:
+    url: jdbc:mysql://localhost:3306/supermarket?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: "001230"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+  hikari:
+    maximum-pool-size: 10
+    minimum-idle: 5
+    connection-timeout: 30000
+    idle-timeout: 600000
+
+# MyBatis 配置
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.domain
+
+# PageHelper 分页配置
+pagehelper:
+  helperDialect: mysql
+  reasonable: true
+  supportMethodsArguments: true
+  params: count=countSql
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# JWT配置（用于用户登录认证）
+jwt:
+  secret: supermarket-secret-key-2026-spring-boot-jwt-token
+  expiration: 86400000  # 24小时，单位毫秒
+
+# 跨域配置（开发环境）
+cors:
+  allowed-origins:
+    - http://localhost:5173
+    - http://localhost:5174
+    - http://127.0.0.1:5500
+    - null
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+
+# 日志配置
+logging:
+  level:
+    com.mapper: DEBUG
+    com.controller: DEBUG
+    com.service: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# 超市业务配置
+supermarket:
+  # 售价计算系数（售价 = 进价 × 系数）
+  sale-price-multiplier: 1.1
+  # 默认预警数量
+  default-warn-num: 10
+  # 库存预警检查开关
+  stock-warning-enabled: true
