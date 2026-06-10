@@ -1,6 +1,8 @@
 package com.controller;
 
+import com.annotation.RoleRequired;
 import com.common.Result;
+import com.constant.Constants;
 import com.domain.Goods;
 import com.domain.InStock;
 import com.dto.request.PurchaseRequestDTO;
@@ -30,13 +32,13 @@ public class InStockController {
 
     /**
      * 进货接口
+     * 权限：管理员(admin)、经理(manager)
      */
+    @RoleRequired({Constants.ROLE_ADMIN, Constants.ROLE_MANAGER})
     @PostMapping("/purchase")
     public Result<String> purchase(@Valid @RequestBody PurchaseRequestDTO request) {
-        // 1. 自动生成进货单号
         String inId = idGenerator.generateInStockId();
 
-        // 2. 创建进货记录对象
         InStock inStock = new InStock();
         inStock.setInId(inId);
         inStock.setSupplyId(request.getSupplyId());
@@ -45,7 +47,6 @@ public class InStockController {
         inStock.setInPrice(request.getInPrice());
         inStock.setInTime(LocalDateTime.now());
 
-        // 3. 构建商品对象
         Goods goods = new Goods();
         goods.setGoodsId(request.getGoodsId());
         goods.setGoodsName(request.getGoodsName());
@@ -54,7 +55,6 @@ public class InStockController {
         goods.setInPrice(request.getInPrice());
         goods.setWarnNum(request.getWarnNum() != null ? request.getWarnNum() : 10);
 
-        // 4. 执行进货
         inStockService.purchase(inStock, goods);
 
         return Result.success("进货成功", inId);
@@ -62,6 +62,7 @@ public class InStockController {
 
     /**
      * 查询商品的进货记录
+     * 权限：所有登录用户
      */
     @GetMapping("/records/{goodsId}")
     public Result<List<InStockRecordDTO>> getInStockRecords(@PathVariable String goodsId) {

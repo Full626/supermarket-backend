@@ -4,6 +4,7 @@ import com.domain.Type;
 import com.mapper.TypeMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,6 @@ public class TypeService {
 
     /**
      * 获取所有类别编号列表
-     * @return 类别编号列表
      */
     public List<String> getAllTypeIds() {
         List<String> typeIds = typeMapper.searchAllTypes();
@@ -25,7 +25,6 @@ public class TypeService {
 
     /**
      * 获取所有类别名称列表
-     * @return 类别名称列表
      */
     public List<String> getAllTypeNames() {
         List<String> typeNames = typeMapper.searchAllTypeNames();
@@ -34,22 +33,14 @@ public class TypeService {
 
     /**
      * 获取所有完整类别信息
-     * @return 类别列表
      */
     public List<Type> getAllTypes() {
-        List<String> typeIds = getAllTypeIds();
-        List<Type> types = new ArrayList<>();
-        for (String typeId : typeIds) {
-            String typeName = typeMapper.searchTypeNameByTypeId(typeId);
-            types.add(new Type(typeId, typeName));
-        }
-        return types;
+        List<Type> types = typeMapper.selectAllTypes();
+        return types != null ? types : new ArrayList<>();
     }
 
     /**
      * 根据类别编号获取类别名称
-     * @param typeId 类别编号
-     * @return 类别名称
      */
     public String getTypeNameById(String typeId) {
         if (typeId == null || typeId.trim().isEmpty()) {
@@ -60,8 +51,6 @@ public class TypeService {
 
     /**
      * 根据类别名称获取类别编号
-     * @param typeName 类别名称
-     * @return 类别编号
      */
     public String getTypeIdByName(String typeName) {
         if (typeName == null || typeName.trim().isEmpty()) {
@@ -72,8 +61,6 @@ public class TypeService {
 
     /**
      * 检查类别是否存在
-     * @param typeId 类别编号
-     * @return 是否存在
      */
     public boolean existsById(String typeId) {
         if (typeId == null || typeId.trim().isEmpty()) {
@@ -85,8 +72,6 @@ public class TypeService {
 
     /**
      * 检查类别名称是否存在
-     * @param typeName 类别名称
-     * @return 是否存在
      */
     public boolean existsByName(String typeName) {
         if (typeName == null || typeName.trim().isEmpty()) {
@@ -97,10 +82,17 @@ public class TypeService {
     }
 
     /**
+     * 检查类别是否被商品引用
+     */
+    public boolean isReferencedByGoods(String typeId) {
+        if (typeId == null || typeId.trim().isEmpty()) {
+            return false;
+        }
+        return typeMapper.countGoodsByTypeId(typeId) > 0;
+    }
+
+    /**
      * 新增类别
-     * @param typeId 类别编号
-     * @param typeName 类别名称
-     * @return 是否成功
      */
     public boolean insertType(String typeId, String typeName) {
         if (typeId == null || typeId.trim().isEmpty()) {
@@ -121,13 +113,58 @@ public class TypeService {
 
     /**
      * 新增类别（使用Type对象）
-     * @param type 类别对象
-     * @return 是否成功
      */
     public boolean insertType(Type type) {
         if (type == null) {
             throw new RuntimeException("类别信息不能为空");
         }
         return insertType(type.getTypeId(), type.getTypeName());
+    }
+
+    // ========== 新增方法 ==========
+
+    /**
+     * 更新类别名称
+     * @param typeId 类别编号
+     * @param typeName 新类别名称
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateType(String typeId, String typeName) {
+        if (typeId == null || typeId.trim().isEmpty()) {
+            throw new RuntimeException("类别编号不能为空");
+        }
+        if (typeName == null || typeName.trim().isEmpty()) {
+            throw new RuntimeException("类别名称不能为空");
+        }
+        if (!existsById(typeId)) {
+            throw new RuntimeException("类别不存在：" + typeId);
+        }
+        // 检查新名称是否已被其他类别使用
+        String existingTypeId = getTypeIdByName(typeName);
+        if (existingTypeId != null && !existingTypeId.equals(typeId)) {
+            throw new RuntimeException("类别名称已存在：" + typeName);
+        }
+        int result = typeMapper.updateType(typeId, typeName);
+        return result > 0;
+    }
+
+    /**
+     * 删除类别
+     * @param typeId 类别编号
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteType(String typeId) {
+        if (typeId == null || typeId.trim().isEmpty()) {
+            throw new RuntimeException("类别编号不能为空");
+        }
+        if (!existsById(typeId)) {
+            throw new RuntimeException("类别不存在：" + typeId);
+        }
+        // 检查是否被商品引用
+        if (isReferencedByGoods(typeId)) {
+            throw new RuntimeException("该类别下存在商品，无法删除。请先删除或转移该类别的商品。");
+        }
+        int result = typeMapper.deleteType(typeId);
+        return result > 0;
     }
 }

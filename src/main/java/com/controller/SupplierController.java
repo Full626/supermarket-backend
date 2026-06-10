@@ -1,11 +1,17 @@
 package com.controller;
 
+import com.annotation.RoleRequired;
 import com.common.Result;
+import com.constant.Constants;
+import com.dto.request.PageRequestDTO;
 import com.dto.request.SupplierQueryDTO;
 import com.dto.request.SupplierRequestDTO;
 import com.dto.request.SupplierUpdateDTO;
+import com.dto.response.PageResponseDTO;
 import com.dto.response.SupplierResponseDTO;
 import com.domain.Supplier;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.service.SupplierService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +29,7 @@ public class SupplierController {
 
     /**
      * 获取所有供应商列表
+     * 权限：所有登录用户
      */
     @GetMapping("/list")
     public Result<List<SupplierResponseDTO>> getAllSuppliers() {
@@ -35,6 +42,7 @@ public class SupplierController {
 
     /**
      * 根据ID查询供应商
+     * 权限：所有登录用户
      */
     @GetMapping("/{supplyId}")
     public Result<SupplierResponseDTO> getSupplierById(@PathVariable String supplyId) {
@@ -47,7 +55,9 @@ public class SupplierController {
 
     /**
      * 新增供应商
+     * 权限：管理员(admin)、经理(manager)
      */
+    @RoleRequired({Constants.ROLE_ADMIN, Constants.ROLE_MANAGER})
     @PostMapping("/add")
     public Result<Void> addSupplier(@Valid @RequestBody SupplierRequestDTO request) {
         Supplier supplier = new Supplier();
@@ -62,7 +72,9 @@ public class SupplierController {
 
     /**
      * 更新供应商信息
+     * 权限：管理员(admin)、经理(manager)
      */
+    @RoleRequired({Constants.ROLE_ADMIN, Constants.ROLE_MANAGER})
     @PutMapping("/update")
     public Result<Void> updateSupplier(@Valid @RequestBody SupplierUpdateDTO request) {
         if (request.getSupplyName() != null && !request.getSupplyName().isEmpty()) {
@@ -78,13 +90,42 @@ public class SupplierController {
     }
 
     /**
-     * 删除供应商（如果需要）
+     * 删除供应商
+     * 权限：仅管理员(admin)
      */
+    @RoleRequired(Constants.ROLE_ADMIN)
     @DeleteMapping("/{supplyId}")
     public Result<Void> deleteSupplier(@PathVariable String supplyId) {
-        // 需要先在 Service 中添加删除方法
-        // supplierService.deleteSupplier(supplyId);
+        supplierService.deleteSupplier(supplyId);
         return Result.success("删除成功", null);
+    }
+
+    /**
+     * 分页查询供应商
+     * 权限：所有登录用户
+     */
+    @GetMapping("/page")
+    public Result<PageResponseDTO<SupplierResponseDTO>> getSuppliersByPage(
+            @Valid SupplierQueryDTO query,
+            @Valid PageRequestDTO pageRequest) {
+
+        PageHelper.startPage(pageRequest.getPageNum(), pageRequest.getPageSize());
+
+        List<Supplier> suppliers = supplierService.getSuppliersByCondition(query);
+        PageInfo<Supplier> pageInfo = new PageInfo<>(suppliers);
+
+        List<SupplierResponseDTO> dtoList = pageInfo.getList().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+
+        PageResponseDTO<SupplierResponseDTO> response = new PageResponseDTO<>();
+        response.setTotal(pageInfo.getTotal());
+        response.setPageNum(pageInfo.getPageNum());
+        response.setPageSize(pageInfo.getPageSize());
+        response.setPages(pageInfo.getPages());
+        response.setList(dtoList);
+
+        return Result.success(response);
     }
 
     private SupplierResponseDTO convertToDTO(Supplier supplier) {

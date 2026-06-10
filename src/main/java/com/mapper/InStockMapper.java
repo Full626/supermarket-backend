@@ -1,10 +1,7 @@
 package com.mapper;
 
 import com.domain.InStock;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 import java.util.Map;
@@ -13,13 +10,10 @@ import java.util.Map;
 public interface InStockMapper {
 
     /**
-     *插入进货记录
+     * 插入进货记录
      */
-    @Insert("<script>"+
-            "INSERT INTO in_stock (inId,supplyId,goodsId,inNum,inPrice,inTime)"+
-            "VALUES (#{inId},#{supplyId},#{goodsId},#{inNum},#{inPrice},#{inTime})"+
-            "</script>"
-    )
+    @Insert("INSERT INTO in_stock (inId, supplyId, goodsId, inNum, inPrice, inTime) " +
+            "VALUES (#{inId}, #{supplyId}, #{goodsId}, #{inNum}, #{inPrice}, #{inTime})")
     int insertInStock(InStock inStock);
 
     /**
@@ -34,4 +28,40 @@ public interface InStockMapper {
     @Select("SELECT COUNT(*) as count, SUM(inNum) as totalNum, SUM(inNum * inPrice) as totalAmount " +
             "FROM in_stock WHERE DATE(inTime) = CURDATE()")
     Map<String, Object> getTodayInStockStat();
+
+    /**
+     * 条件查询进货记录
+     */
+    @Select("<script>" +
+            "SELECT * FROM in_stock WHERE 1=1 " +
+            "<if test='goodsId != null and goodsId != \"\"'>" +
+            " AND goodsId = #{goodsId}" +
+            "</if>" +
+            "<if test='supplyId != null and supplyId != \"\"'>" +
+            " AND supplyId = #{supplyId}" +
+            "</if>" +
+            "<if test='startDate != null and startDate != \"\"'>" +
+            " AND DATE(inTime) &gt;= #{startDate}" +
+            "</if>" +
+            "<if test='endDate != null and endDate != \"\"'>" +
+            " AND DATE(inTime) &lt;= #{endDate}" +
+            "</if>" +
+            " ORDER BY inTime DESC" +
+            "</script>")
+    List<InStock> selectByCondition(@Param("goodsId") String goodsId,
+                                    @Param("supplyId") String supplyId,
+                                    @Param("startDate") String startDate,
+                                    @Param("endDate") String endDate);
+
+    /**
+     * 统计指定商品的进货记录数量（用于删除前检查）
+     */
+    @Select("SELECT COUNT(*) FROM in_stock WHERE goodsId = #{goodsId}")
+    int countByGoodsId(@Param("goodsId") String goodsId);
+
+    /**
+     * 统计指定供应商的进货记录数量（用于删除前检查）
+     */
+    @Select("SELECT COUNT(*) FROM in_stock WHERE supplyId = #{supplyId}")
+    int countBySupplyId(@Param("supplyId") String supplyId);
 }

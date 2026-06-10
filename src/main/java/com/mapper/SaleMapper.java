@@ -1,10 +1,7 @@
 package com.mapper;
 
 import com.domain.Sale;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 import java.util.Map;
@@ -43,4 +40,30 @@ public interface SaleMapper {
             "GROUP BY DATE_FORMAT(saleTime, '%Y-%m') " +
             "ORDER BY month DESC")
     List<Map<String, Object>> getMonthlySaleStat();
+
+    /**
+     * 条件查询销售记录
+     */
+    @Select("<script>" +
+            "SELECT * FROM sale WHERE 1=1 " +
+            "<if test='goodsId != null and goodsId != \"\"'>" +
+            " AND goodsId = #{goodsId}" +
+            "</if>" +
+            "<if test='startDate != null and startDate != \"\"'>" +
+            " AND DATE(saleTime) &gt;= #{startDate}" +
+            "</if>" +
+            "<if test='endDate != null and endDate != \"\"'>" +
+            " AND DATE(saleTime) &lt;= #{endDate}" +
+            "</if>" +
+            " ORDER BY saleTime DESC" +
+            "</script>")
+    List<Sale> selectByCondition(@Param("goodsId") String goodsId,
+                                 @Param("startDate") String startDate,
+                                 @Param("endDate") String endDate);
+
+    /**
+     * 统计指定商品的销售记录数量（用于删除前检查）
+     */
+    @Select("SELECT COUNT(*) FROM sale WHERE goodsId = #{goodsId}")
+    int countByGoodsId(@Param("goodsId") String goodsId);
 }
